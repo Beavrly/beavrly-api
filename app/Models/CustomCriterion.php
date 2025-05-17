@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class CustomCriterion extends Model
 {
-    protected $fillable = ['criteria_id', 'user_id', 'scope_id', 'estimate_id', 'name', 'description'];
+    protected $fillable = ['criteria_id', 'user_id', 'scope_id', 'estimative_id', 'name', 'description'];
 
     public function baseCriterion()
     {

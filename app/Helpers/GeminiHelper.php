@@ -2,6 +2,8 @@
 
 namespace App\Helpers;
 
+use App\Models\Criterion;
+use App\Models\CustomCriterion;
 use App\Models\Estimative;
 use App\Models\Scope;
 use GeminiAPI\Client;
@@ -73,6 +75,33 @@ class GeminiHelper
         return $this->addMessage('user', "Base de dados de estimativas aprovadas:\n\n" . $contextText);
     }
 
+    public function addDynamicCriteriaContext(array $criteria): self
+    {
+        $globalCriteria = Criterion::where('is_global', true)->get();
+
+        $combined = collect($criteria)->map(function ($item) {
+            return [
+                'name' => $item['name'] ?? '(sem nome)',
+                'description' => $item['description'] ?? '(sem descrição)'
+            ];
+        });
+
+        foreach ($globalCriteria as $global) {
+            $combined->push([
+                'name' => $global->name,
+                'description' => $global->description
+            ]);
+        }
+
+        if ($combined->isEmpty()) {
+            return $this->addMessage('user', "⚠️ Nenhum critério adicional foi fornecido.");
+        }
+
+        $text = $combined->map(fn($c) => "- {$c['name']}: {$c['description']}")->implode("\n");
+
+        return $this->addMessage('user', "Critérios adicionais a serem considerados:\n" . $text);
+    }
+    
 
    
     public function generate(): string
@@ -137,9 +166,8 @@ class GeminiHelper
             ->generate();
     }
 
-    public static function generateEstimativeFromScope(string $scopeContent, array $context = []): string
+    public static function generateEstimativeFromScope(string $scopeContent, array $context = [], array $criteriaFromRequest = []): string
     {
-        $hourlyRate = $context['Valor hora'] ?? 120;
 
         $contextText = collect($context)
             ->map(fn($v, $k) => "$k: $v")
@@ -170,20 +198,29 @@ class GeminiHelper
 
                     
                     {
-                        "hourly_rate": {$hourlyRate},
+                        "hourly_rate": "",
                         "estimates": {
                             "optimistic": {
-                                "hours": "",
+                                "dev_hours": "",
+                                "design_hours": "",
+                                "qa_hours": "",
+                                "avg_hours": "",
                                 "total_value": "",
                                 "observations": ""
                             },
                             "average": {
-                                "hours": "",
+                                "dev_hours": "",
+                                "design_hours": "",
+                                "qa_hours": "",
+                                "avg_hours": "",
                                 "total_value": "",
                                 "observations": ""
                             },
                             "pessimistic": {
-                                "hours": "",
+                                "dev_hours": "",
+                                "design_hours": "",
+                                "qa_hours": "",
+                                "avg_hours": "",
                                 "total_value": "",
                                 "observations": ""
                             }
@@ -218,6 +255,7 @@ class GeminiHelper
         
         return (new self())
             ->addApprovedEstimativesContext()
+            ->addDynamicCriteriaContext($criteriaFromRequest)
             ->addMessage('user', $prompt)
             ->generate();
     }

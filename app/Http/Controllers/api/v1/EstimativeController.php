@@ -5,6 +5,7 @@ namespace App\Http\Controllers\api\v1;
 use App\Helpers\ApiResponse;
 use App\Helpers\GeminiHelper;
 use App\Http\Controllers\Controller;
+use App\Models\CustomCriterion;
 use App\Models\Estimative;
 use App\Models\Scope;
 use Illuminate\Http\Request;
@@ -24,7 +25,9 @@ class EstimativeController extends Controller
                 'Valor hora' => $request->input('hourly_rate'),
             ];
 
-            $response = GeminiHelper::generateEstimativeFromScope($scope->content, $context);
+            $criteriaFromRequest = $request->input('criteria', []);
+
+            $response = GeminiHelper::generateEstimativeFromScope($scope->content, $context, $criteriaFromRequest);
             $cleanedResponse = preg_replace('/^```(?:json)?|```$/m', '', trim($response));
 
             $data = json_decode($cleanedResponse, true);
@@ -37,36 +40,55 @@ class EstimativeController extends Controller
                 ]);
             }
 
-            
-            $estimative = Estimative::create([
-                'project_id' => 1,
-                'scope_id' => $scope->id,
-                'type' => $request->input('type', 'system'),
-                'content' => $response,
-                'hourly_rate' => $data['hourly_rate'] ?? $request->input('hourly_rate'),
-            
-                'estimated_hours_optimistic'   => $data['estimates']['optimistic']['hours'] ?? null,
-                'total_value_optimistic'   => isset($data['estimates']['optimistic']['total_value']) ? intval($data['estimates']['optimistic']['total_value'] * 100) : null,
-            
-                'estimated_hours_pessimistic' => $data['estimates']['pessimistic']['hours'] ?? null,
-                'total_value_pessimistic'  => isset($data['estimates']['pessimistic']['total_value']) ? intval($data['estimates']['pessimistic']['total_value'] * 100) : null,
-            
-                'estimated_hours_average'     => $data['estimates']['average']['hours'] ?? null,
-                'total_value_average'      => isset($data['estimates']['average']['total_value']) ? intval($data['estimates']['average']['total_value'] * 100) : null,
+            $estimative = new Estimative();
+            $estimative->project_id = 1;
+            $estimative->scope_id = $scope->id;
+            $estimative->type = $request->input('type', 'system');
+            $estimative->content = $response;
 
-                'approval' => 'pending',
-                'additional_context' => $context,
-            
-                'structured_risks' => $data['risks'] ?? [],
-            
-                'considerations' => implode("\n", [
-                    "Nível de complexidade: " . ($data['complexity_level'] ?? 'N/A'),
-                    "Fatores que influenciaram: " . implode(', ', $data['influencing_factors'] ?? []),
-                    "Recomendações: " . implode(', ', $data['recommendations'] ?? []),
-                    "Observações gerais: " . ($data['general_notes'] ?? 'N/A')
-                ]),
-                'status' => 1
+            $estimative->dev_estimated_hours_optimistic = $data['estimates']['optimistic']['dev_hours'] ?? null;
+            $estimative->design_estimated_hours_optimistic = $data['estimates']['optimistic']['design_hours'] ?? null;
+            $estimative->qa_estimated_hours_optimistic = $data['estimates']['optimistic']['qa_hours'] ?? null;
+            $estimative->avg_estimated_hours_optimistic = $data['estimates']['optimistic']['avg_hours'] ?? null;
+            $estimative->total_value_optimistic = isset($data['estimates']['optimistic']['total_value']) 
+                ? intval($data['estimates']['optimistic']['total_value'] * 100) : null;
+
+            $estimative->dev_estimated_hours_pessimistic = $data['estimates']['pessimistic']['dev_hours'] ?? null;
+            $estimative->design_estimated_hours_pessimistic = $data['estimates']['pessimistic']['design_hours'] ?? null;
+            $estimative->qa_estimated_hours_pessimistic = $data['estimates']['pessimistic']['qa_hours'] ?? null;
+            $estimative->avg_estimated_hours_pessimistic = $data['estimates']['pessimistic']['avg_hours'] ?? null;
+            $estimative->total_value_pessimistic = isset($data['estimates']['pessimistic']['total_value']) 
+                ? intval($data['estimates']['pessimistic']['total_value'] * 100) : null;
+
+            $estimative->dev_estimated_hours_average = $data['estimates']['average']['dev_hours'] ?? null;
+            $estimative->design_estimated_hours_average = $data['estimates']['average']['design_hours'] ?? null;
+            $estimative->qa_estimated_hours_average = $data['estimates']['average']['qa_hours'] ?? null;
+            $estimative->avg_estimated_hours_average = $data['estimates']['average']['avg_hours'] ?? null;
+            $estimative->total_value_average = isset($data['estimates']['average']['total_value']) 
+                ? intval($data['estimates']['average']['total_value'] * 100) : null;
+
+            $estimative->approval = 'pending';
+            $estimative->additional_context = $context;
+            $estimative->structured_risks = $data['risks'] ?? [];
+
+            $estimative->considerations = implode("\n", [
+                "Nível de complexidade: " . ($data['complexity_level'] ?? 'N/A'),
+                "Fatores que influenciaram: " . implode(', ', $data['influencing_factors'] ?? []),
+                "Recomendações: " . implode(', ', $data['recommendations'] ?? []),
+                "Observações gerais: " . ($data['general_notes'] ?? 'N/A')
             ]);
+
+            $estimative->status = 1;
+            $estimative->save();
+            
+            foreach ($criteriaFromRequest as $item) {
+                CustomCriterion::create([
+                    'estimative_id' => $estimative->id,
+                    'project_id' => $estimative->project_id,
+                    'name' => $item['name'] ?? 'Sem nome',
+                    'description' => $item['description'] ?? null
+                ]);
+            }
 
             return ApiResponse::success($estimative, 'Estimativa gerada com sucesso.', Response::HTTP_CREATED);
         } catch (Exception $e) {

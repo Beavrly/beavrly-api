@@ -1,14 +1,13 @@
 <?php
 
+use App\Http\Controllers\api\v1\CriterionController;
+use App\Http\Controllers\api\v1\CustomCriterionController;
 use App\Http\Controllers\api\v1\EstimativeController;
 use App\Http\Controllers\api\v1\TranscriptionController;
 use App\Http\Controllers\api\v1\ScopeController;
 use Illuminate\Support\Facades\Route;
 
 
-Route::prefix('v1')->group(function () {
-    Route::get('/up', [TranscriptionController::class, 'test']);
-});
 
 Route::prefix('v1')->group(function () {
 
@@ -51,8 +50,25 @@ Route::prefix('v1')->group(function () {
 
             Route::post('/scopes/{scope}/generate-estimative', 'generateFromScope');
         });
+
+        // Critérios globais
+        Route::controller(CriterionController::class)->group(function () {
+            Route::prefix('criteria')->group(function () {
+                Route::get('/', 'index');
+                Route::post('/', 'store');
+                Route::get('/{criterion}', 'show');
+                Route::put('/{criterion}', 'update');
+                Route::delete('/{criterion}', 'remove');
+            });
+        });
+
+        // Critérios customizados
+        Route::controller(CustomCriterionController::class)->group(function () {
+            Route::prefix('custom-criteria')->group(function () {
+                Route::get('/', 'index');
+                Route::post('/', 'store');
+                Route::delete('/{customCriterion}', 'remove');
+            });
+        });
     
-        // SETTINGS (opcional)
-        // Route::get('/settings', [SettingController::class, 'index']);
-        // Route::post('/settings', [SettingController::class, 'store']);
 });
