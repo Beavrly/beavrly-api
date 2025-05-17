@@ -121,6 +121,7 @@ class EstimativeController extends Controller
             $estimative->type = $request->input('type', 'system');
             $estimative->content = $response;
 
+
             foreach (['optimistic', 'average', 'pessimistic'] as $level) {
                 $estimative->{"dev_estimated_hours_$level"} = $data['estimates'][$level]['dev_hours'] ?? null;
                 $estimative->{"design_estimated_hours_$level"} = $data['estimates'][$level]['design_hours'] ?? null;

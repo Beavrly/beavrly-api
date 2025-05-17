@@ -10,6 +10,11 @@ class Estimative extends Model
 
     protected $guarded = [];
 
+    protected $casts = [
+        'additional_context' => 'array',
+        'structured_risks' => 'array',
+    ];
+
     public function scope()
     {
         return $this->belongsTo(Scope::class);
