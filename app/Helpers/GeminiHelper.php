@@ -7,7 +7,6 @@ use App\Models\Scope;
 use GeminiAPI\Client;
 use GeminiAPI\Resources\ModelName;
 use GeminiAPI\Resources\Parts\TextPart;
-use Illuminate\Support\Facades\Storage;
 use Smalot\PdfParser\Parser as PdfParser;
 
 class GeminiHelper

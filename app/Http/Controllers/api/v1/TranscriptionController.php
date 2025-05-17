@@ -12,9 +12,7 @@ use Smalot\PdfParser\Parser as PdfParser;
 
 class TranscriptionController extends Controller
 {
-    /**
-     * Salvar uma transcrição via upload de arquivo ou texto direto
-     */
+
     public function store(Request $request)
     {
         try {

@@ -13,9 +13,7 @@ use Exception;
 
 class EstimativeController extends Controller
 {
-    /**
-     * Gerar uma nova estimativa a partir de um escopo
-     */
+
     public function generateFromScope(Scope $scope, Request $request)
     {
         try {

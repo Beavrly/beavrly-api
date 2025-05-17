@@ -13,31 +13,44 @@ Route::prefix('v1')->group(function () {
 Route::prefix('v1')->group(function () {
 
         // Transcrições
-        Route::get('/transcripts', [TranscriptionController::class, 'index']);
-        Route::get('/transcripts/{transcript}', [TranscriptionController::class, 'show']);
-        Route::post('/transcripts', [TranscriptionController::class, 'store']);
-        Route::delete('/transcripts/{transcript}', [TranscriptionController::class, 'remove']);
+        Route::controller(TranscriptionController::class)->group(function(){
+            Route::prefix('transcripts')->group(function(){
+                Route::get('/', 'index');
+                Route::post('/', 'store');
+                Route::get('/{transcript}', 'show');
+                Route::delete('/{transcript}', 'remove');
+            });
+        });
     
         // Escopos
-        Route::get('/scopes', [ScopeController::class, 'index']);
-        Route::get('/scopes/{scope}', [ScopeController::class, 'show']);
-        Route::post('/scopes', [ScopeController::class, 'store']);
-        Route::delete('/scopes/{scope}', [ScopeController::class, 'remove']);
-        Route::post('/transcripts/{transcript}/generate-scope', [ScopeController::class, 'generateFromTranscript']);
+        Route::controller(ScopeController::class)->group(function(){
+            Route::prefix('scopes')->group(function(){
+                Route::get('/', 'index');
+                Route::post('/', 'store');
+                Route::get('/{scope}', 'show');
+                Route::delete('/{scope}', 'remove');
 
-        Route::post('/scopes/{scope}/approve', [ScopeController::class, 'approve']);
-        Route::post('/scopes/{scope}/reject', [ScopeController::class, 'reject']);
+                Route::post('/{scope}/approve', 'approve');
+                Route::post('/{scope}/reject', 'reject');
+            });
 
+            Route::post('/transcripts/{transcript}/generate-scope', 'generateFromTranscript');
+        });
 
         // Estimativas
-        Route::get('/estimatives', [EstimativeController::class, 'index']);
-        Route::get('/estimatives/{estimative}', [EstimativeController::class, 'show']);
-        Route::post('/estimatives', [EstimativeController::class, 'store']);
-        Route::delete('/estimatives/{estimative}', [EstimativeController::class, 'remove']);
-        Route::post('/scopes/{scope}/generate-estimative', [EstimativeController::class, 'generateFromScope']);
+        Route::controller(EstimativeController::class)->group(function(){
+            Route::prefix('estimatives')->group(function(){
+                Route::get('/', 'index');
+                Route::get('/{estimative}', 'show');
+                Route::post('/', 'store');
+                Route::delete('/{estimative}', 'remove');
+                
+                Route::post('/{estimative}/approve', 'approve');
+                Route::post('/{estimative}/reject', 'reject');
+            });
 
-        Route::post('/estimatives/{estimative}/approve', [EstimativeController::class, 'approve']);
-        Route::post('/estimatives/{estimative}/reject', [EstimativeController::class, 'reject']);
+            Route::post('/scopes/{scope}/generate-estimative', 'generateFromScope');
+        });
     
         // SETTINGS (opcional)
         // Route::get('/settings', [SettingController::class, 'index']);
