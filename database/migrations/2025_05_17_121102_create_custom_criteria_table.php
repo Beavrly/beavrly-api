@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('custom_criteria', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('criteria_id')->nullable()->constrained()->nullOnDelete();
+            $table->foreignId('criteria_id')->nullable()->constrained('criteria')->nullOnDelete();
             $table->foreignId('project_id')->constrained()->onDelete('cascade');
             $table->foreignId('estimative_id')->nullable()->constrained()->nullOnDelete();
             $table->string('name');
