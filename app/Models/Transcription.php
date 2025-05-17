@@ -8,7 +8,7 @@ class Transcription extends Model
 {
     protected $table = 'transcripts'; 
 
-    protected $fillable = ['content', 'source_file', 'status', 'type', 'project_id', 'title'];
+    protected $guarded = [];
 
 
     public function scope()

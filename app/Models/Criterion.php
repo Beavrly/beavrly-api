@@ -6,7 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class Criterion extends Model
 {
-    protected $fillable = ['name', 'description', 'is_global'];
+    protected $guarded = [];
+
 
     public function customCriteria()
     {

@@ -6,17 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class Scope extends Model
 {
-    protected $table = 'scopes';
+    protected $guarded = [];
 
-    protected $fillable = [
-        'content',
-        'source_file',
-        'transcript_id',
-        'project_id',
-        'type',
-        'approval',
-        'title'
-    ];
 
     public function transcript()
     {
