@@ -62,8 +62,11 @@ class ScopeController extends Controller
                 return ApiResponse::validationError(['file' => 'Arquivo ou texto é obrigatório.']);
             }
 
+            $title = GeminiHelper::generateTitle($mdContent ?? $content);
+
             $scope = Scope::create([
                 'content' => $mdContent ?? $content,
+                'title' => $title,
                 'source_file' => $filename ?? null,
                 'project_id' => $request->project_id ?? 1,
                 'transcript_id' => $request->transcript_id,
@@ -88,7 +91,10 @@ class ScopeController extends Controller
 
             $response = GeminiHelper::generateScopeFromTranscript($transcript->content);
 
+            $title = GeminiHelper::generateTitle($response);
+
             $scope = Scope::create([
+                'title' => $title,
                 'content' => $response,
                 'transcript_id' => $transcript->id,
                 'project_id' => 1,

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\api\v1;
 
 use App\Helpers\ApiResponse;
+use App\Helpers\GeminiHelper;
 use App\Http\Controllers\Controller;
 use App\Models\Transcription;
 use Illuminate\Http\Request;
@@ -38,8 +39,11 @@ class TranscriptionController extends Controller
                 return ApiResponse::error('Nenhum conteúdo foi enviado.', Response::HTTP_BAD_REQUEST);
             }
 
+            $title = GeminiHelper::generateTitle($content);
+
             $transcript = Transcription::create([
                 'content' => $content,
+                'title' => $title,
                 'source_file' => $filename ?? null,
                 'project_id' => $request->project_id ?? 1,
             ]);

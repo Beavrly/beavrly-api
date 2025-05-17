@@ -11,9 +11,74 @@ use App\Models\Scope;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Exception;
+use Smalot\PdfParser\Parser as PdfParser;
 
 class EstimativeController extends Controller
 {
+
+    public function store(Request $request)
+    {
+        try {
+            if (!$request->hasFile('file')) {
+                return ApiResponse::validationError(['file' => 'Arquivo obrigatório.']);
+            }
+
+            $file = $request->file('file');
+            $extension = strtolower($file->getClientOriginalExtension());
+            $filename = $file->store('estimatives');
+
+            if (!in_array($extension, ['pdf', 'txt', 'md'])) {
+                return ApiResponse::validationError(['file' => 'Formato não suportado. Use PDF, TXT ou MD.']);
+            }
+
+            $content = $extension === 'pdf'
+                ? (new \Smalot\PdfParser\Parser())->parseFile($file->getRealPath())->getText()
+                : file_get_contents($file->getRealPath());
+
+            $data = GeminiHelper::extractEstimativeFromText($content);
+
+            if (!$data) {
+                return ApiResponse::error('Não foi possível interpretar os dados da estimativa.', 422);
+            }
+
+            $title = GeminiHelper::generateTitle($content);
+
+            $estimative = new Estimative();
+            $estimative->title = $title;
+            $estimative->project_id = $request->project_id ?? 1;
+            $estimative->type = 'system';
+            $estimative->content = $data;
+            $estimative->source_file = $filename;
+
+            foreach (['optimistic', 'average', 'pessimistic'] as $level) {
+                $estimative->{"dev_estimated_hours_$level"} = $data['estimates'][$level]['dev_hours'] ?? null;
+                $estimative->{"design_estimated_hours_$level"} = $data['estimates'][$level]['design_hours'] ?? null;
+                $estimative->{"qa_estimated_hours_$level"} = $data['estimates'][$level]['qa_hours'] ?? null;
+                $estimative->{"avg_estimated_hours_$level"} = $data['estimates'][$level]['avg_hours'] ?? null;
+                $estimative->{"total_value_$level"} = isset($data['estimates'][$level]['total_value']) 
+                    ? intval($data['estimates'][$level]['total_value'] * 100) : null;
+            }
+
+            $estimative->approval = 'approved';
+            $estimative->structured_risks = $data['risks'] ?? [];
+            $estimative->status = 1;
+
+            $estimative->considerations = implode("\n", [
+                "Nível de complexidade: " . ($data['complexity_level'] ?? 'N/A'),
+                "Fatores que influenciaram: " . implode(', ', $data['influencing_factors'] ?? []),
+                "Recomendações: " . implode(', ', $data['recommendations'] ?? []),
+                "Observações gerais: " . ($data['general_notes'] ?? 'N/A')
+            ]);
+
+            $estimative->save();
+
+            return ApiResponse::success($estimative, 'Estimativa manual cadastrada com sucesso.', Response::HTTP_CREATED);
+        } catch (\Exception $e) {
+            return ApiResponse::error('Erro ao cadastrar estimativa manual.', 500, [
+                'exception' => $e->getMessage()
+            ]);
+        }
+    }
 
     public function generateFromScope(Scope $scope, Request $request)
     {
@@ -40,32 +105,23 @@ class EstimativeController extends Controller
                 ]);
             }
 
+            $title = GeminiHelper::generateTitle($response);
+
             $estimative = new Estimative();
+            $estimative->title = $title;
             $estimative->project_id = 1;
             $estimative->scope_id = $scope->id;
             $estimative->type = $request->input('type', 'system');
             $estimative->content = $response;
 
-            $estimative->dev_estimated_hours_optimistic = $data['estimates']['optimistic']['dev_hours'] ?? null;
-            $estimative->design_estimated_hours_optimistic = $data['estimates']['optimistic']['design_hours'] ?? null;
-            $estimative->qa_estimated_hours_optimistic = $data['estimates']['optimistic']['qa_hours'] ?? null;
-            $estimative->avg_estimated_hours_optimistic = $data['estimates']['optimistic']['avg_hours'] ?? null;
-            $estimative->total_value_optimistic = isset($data['estimates']['optimistic']['total_value']) 
-                ? intval($data['estimates']['optimistic']['total_value'] * 100) : null;
-
-            $estimative->dev_estimated_hours_pessimistic = $data['estimates']['pessimistic']['dev_hours'] ?? null;
-            $estimative->design_estimated_hours_pessimistic = $data['estimates']['pessimistic']['design_hours'] ?? null;
-            $estimative->qa_estimated_hours_pessimistic = $data['estimates']['pessimistic']['qa_hours'] ?? null;
-            $estimative->avg_estimated_hours_pessimistic = $data['estimates']['pessimistic']['avg_hours'] ?? null;
-            $estimative->total_value_pessimistic = isset($data['estimates']['pessimistic']['total_value']) 
-                ? intval($data['estimates']['pessimistic']['total_value'] * 100) : null;
-
-            $estimative->dev_estimated_hours_average = $data['estimates']['average']['dev_hours'] ?? null;
-            $estimative->design_estimated_hours_average = $data['estimates']['average']['design_hours'] ?? null;
-            $estimative->qa_estimated_hours_average = $data['estimates']['average']['qa_hours'] ?? null;
-            $estimative->avg_estimated_hours_average = $data['estimates']['average']['avg_hours'] ?? null;
-            $estimative->total_value_average = isset($data['estimates']['average']['total_value']) 
-                ? intval($data['estimates']['average']['total_value'] * 100) : null;
+            foreach (['optimistic', 'average', 'pessimistic'] as $level) {
+                $estimative->{"dev_estimated_hours_$level"} = $data['estimates'][$level]['dev_hours'] ?? null;
+                $estimative->{"design_estimated_hours_$level"} = $data['estimates'][$level]['design_hours'] ?? null;
+                $estimative->{"qa_estimated_hours_$level"} = $data['estimates'][$level]['qa_hours'] ?? null;
+                $estimative->{"avg_estimated_hours_$level"} = $data['estimates'][$level]['avg_hours'] ?? null;
+                $estimative->{"total_value_$level"} = isset($data['estimates'][$level]['total_value']) 
+                    ? intval($data['estimates'][$level]['total_value'] * 100) : null;
+            }
 
             $estimative->approval = 'pending';
             $estimative->additional_context = $context;

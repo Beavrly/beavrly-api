@@ -14,7 +14,8 @@ class Scope extends Model
         'transcript_id',
         'project_id',
         'type',
-        'approval'
+        'approval',
+        'title'
     ];
 
     public function transcript()

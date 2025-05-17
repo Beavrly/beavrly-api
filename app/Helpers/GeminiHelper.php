@@ -29,6 +29,29 @@ class GeminiHelper
         return $this;
     }
 
+    public static function generateTitle(string $rawContent): string
+    {
+        $prompt = <<<EOT
+            Você é um assistente inteligente de documentação. Com base no conteúdo abaixo, gere um título curto e descritivo (no máximo 12 palavras), que resuma o principal assunto da transcrição ou documento técnico. Seja direto, profissional e claro.
+
+            ---
+
+            Conteúdo:
+            $rawContent
+
+            ---
+
+            🛑 Retorne apenas o título. Nada mais.
+            EOT;
+
+        $title = (new self())
+            ->addMessage('user', $prompt)
+            ->generate();
+
+        return trim($title);
+    }
+
+
     public function addFileContent(string $path): self
     {
         $extension = pathinfo($path, PATHINFO_EXTENSION);
@@ -259,5 +282,84 @@ class GeminiHelper
             ->addMessage('user', $prompt)
             ->generate();
     }
+
+    public static function extractEstimativeFromText(string $rawContent): ?array
+    {
+        $prompt = <<<EOT
+            Você é um assistente de análise de projetos. Abaixo está o conteúdo de um documento de estimativa técnica.
+
+            🔍 **Detalhamento exigido**:
+
+            - Os campos `observations`, `complexity_level`, `risks`, `influencing_factors`, `recommendations` e `general_notes` podem ser **completos e descritivos** caso seja possível extrair conteúdo relativo a eles, com justificativas técnicas reais, exemplos, possíveis causas e implicações. Caso não seja possível, deixe vazio.
+            - Evite frases genéricas. Dê explicações claras de **como o raciocínio foi feito**, o que influenciou a estimativa e quais aspectos merecem atenção.
+            - Use termos técnicos e linguagem precisa. Seja objetivo, mas informativo.
+
+            O campo risks deve ser um array de objetos, cada um contendo os campos: description, probability, impact, mitigation.
+
+            📦 **Formato esperado**:
+
+            {
+                "hourly_rate": "",
+                "estimates": {
+                    "optimistic": {
+                        "dev_hours": "",
+                        "design_hours": "",
+                        "qa_hours": "",
+                        "avg_hours": "",
+                        "total_value": "",
+                        "observations": ""
+                    },
+                    "average": {
+                        "dev_hours": "",
+                        "design_hours": "",
+                        "qa_hours": "",
+                        "avg_hours": "",
+                        "total_value": "",
+                        "observations": ""
+                    },
+                    "pessimistic": {
+                        "dev_hours": "",
+                        "design_hours": "",
+                        "qa_hours": "",
+                        "avg_hours": "",
+                        "total_value": "",
+                        "observations": ""
+                    }
+                },
+                "complexity_level": "",
+                "risks": [
+                    {
+                        "description": "",
+                        "probability": "Baixa | Média | Alta",
+                        "impact": "Baixo | Médio | Alto",
+                        "mitigation": ""
+                    }
+                ],
+                "influencing_factors": [],
+                "recommendations": [],
+                "general_notes": ""
+            }
+
+            Se algum campo não for identificado, deixe `null`. Nenhum comentário fora do JSON.
+
+            ---
+
+            $rawContent
+            EOT;
+
+        $response = (new self())
+            ->addMessage('user', $prompt)
+            ->generate();
+
+        $cleaned = preg_replace('/^```(?:json)?|```$/m', '', trim($response));
+        $data = json_decode($cleaned, true);
+
+        if (!$data || !isset($data['estimates'])) {
+            return null;
+        }
+
+        return $data;
+    }
+
 
 }

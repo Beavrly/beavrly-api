@@ -10,6 +10,7 @@ class Estimative extends Model
 
     protected $fillable = [
         'scope_id',
+        'title',
         'project_id',
         'content',
         'type',
