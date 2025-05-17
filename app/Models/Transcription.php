@@ -16,8 +16,5 @@ class Transcription extends Model
         return $this->hasOne(Scope::class, 'transcription_id', 'id');
     }
 
-    public function getContentAttribute($value)
-    {
-        return str_replace("\n", '', nl2br($value));
-    }
+
 }

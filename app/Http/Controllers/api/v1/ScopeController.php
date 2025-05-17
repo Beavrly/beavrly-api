@@ -20,6 +20,7 @@ class ScopeController extends Controller
     {
         try {
             $content = '';
+            $mdContent = null;
 
             if ($request->hasFile('file')) {
                 $file = $request->file('file');
@@ -33,6 +34,26 @@ class ScopeController extends Controller
                     $content = file_get_contents($file->getRealPath());
                 }
 
+                $prompt = <<<EOT
+                    Você é um analista de requisitos de software. Converta o conteúdo bruto abaixo em um escopo técnico bem formatado, usando Markdown com:
+
+                    - Títulos com `##` ou `###`
+                    - Listas com `-`
+                    - Ênfase com *itálico* ou **negrito**
+                    - Quebras de seção claras
+
+                    Retorne apenas o conteúdo final em Markdown. Nenhum comentário fora do escopo.
+
+                    ---
+
+                    Conteúdo bruto:
+                    {$content}
+                    EOT;
+
+                $mdContent = (new GeminiHelper())
+                    ->addMessage('user', $prompt)
+                    ->generate();
+
                 $filename = $file->store('scopes');
             } elseif ($request->has('text')) {
                 $content = $request->input('text');
@@ -42,7 +63,7 @@ class ScopeController extends Controller
             }
 
             $scope = Scope::create([
-                'content' => $content,
+                'content' => $mdContent ?? $content,
                 'source_file' => $filename ?? null,
                 'project_id' => $request->project_id ?? 1,
                 'transcript_id' => $request->transcript_id,

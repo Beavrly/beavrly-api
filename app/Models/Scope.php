@@ -27,9 +27,6 @@ class Scope extends Model
         return $this->hasMany(Estimative::class);
     }
 
-    public function getContentAttribute($value)
-    {
-        return str_replace("\n", '', nl2br($value));
-    }
+
 
 }

@@ -36,9 +36,5 @@ class Estimative extends Model
         return $this->belongsTo(Scope::class);
     }
 
-    public function getContentAttribute($value)
-    {
-        return str_replace("\n", '', nl2br($value));
-    }
 
 }
