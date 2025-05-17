@@ -80,7 +80,7 @@ class EstimativeController extends Controller
 
             $estimative->status = 1;
             $estimative->save();
-            
+
             foreach ($criteriaFromRequest as $item) {
                 CustomCriterion::create([
                     'estimative_id' => $estimative->id,
