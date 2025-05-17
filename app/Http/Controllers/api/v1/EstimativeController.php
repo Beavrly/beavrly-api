@@ -35,10 +35,17 @@ class EstimativeController extends Controller
                 ? (new \Smalot\PdfParser\Parser())->parseFile($file->getRealPath())->getText()
                 : file_get_contents($file->getRealPath());
 
-            $data = GeminiHelper::extractEstimativeFromText($content);
+            $response = GeminiHelper::extractEstimativeFromText($content);
+            $cleanedResponse = preg_replace('/^```(?:json)?|```$/m', '', trim($response));
 
-            if (!$data) {
-                return ApiResponse::error('Não foi possível interpretar os dados da estimativa.', 422);
+            $data = json_decode($cleanedResponse, true);
+
+            if (!$data || !isset($data['estimates'])) {
+                return ApiResponse::error('Formato de resposta inválido do Gemini.', 422, [
+                    'raw_response' => $response,
+                    'parsed_clean' => $cleanedResponse,
+                    'json_error' => json_last_error_msg()
+                ]);
             }
 
             $title = GeminiHelper::generateTitle($content);
@@ -47,7 +54,7 @@ class EstimativeController extends Controller
             $estimative->title = $title;
             $estimative->project_id = $request->project_id ?? 1;
             $estimative->type = 'system';
-            $estimative->content = $data;
+            $estimative->content = $response;
             $estimative->source_file = $filename;
 
             foreach (['optimistic', 'average', 'pessimistic'] as $level) {

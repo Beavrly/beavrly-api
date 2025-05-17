@@ -283,7 +283,7 @@ class GeminiHelper
             ->generate();
     }
 
-    public static function extractEstimativeFromText(string $rawContent): ?array
+    public static function extractEstimativeFromText(string $rawContent): string
     {
         $prompt = <<<EOT
             Você é um assistente de análise de projetos. Abaixo está o conteúdo de um documento de estimativa técnica.
@@ -342,6 +342,7 @@ class GeminiHelper
 
             Se algum campo não for identificado, deixe `null`. Nenhum comentário fora do JSON.
 
+            NUNCA retorne nenhum texto fora do JSON. Nenhum comentário, título, explicação ou formatação adicional fora da estrutura.
             ---
 
             $rawContent
@@ -351,14 +352,8 @@ class GeminiHelper
             ->addMessage('user', $prompt)
             ->generate();
 
-        $cleaned = preg_replace('/^```(?:json)?|```$/m', '', trim($response));
-        $data = json_decode($cleaned, true);
+        return $response;
 
-        if (!$data || !isset($data['estimates'])) {
-            return null;
-        }
-
-        return $data;
     }
 
 
